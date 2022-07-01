@@ -1,0 +1,15 @@
+### O aplicativo
+
+Propõe-se a analisar diferentes tipos de delineamentos experimentais que explicam a variabilidade do escoamento das chuvas para a absorção pelo sistema radicular do café arábica, levando-se em consideração fatores como a espécie das árvores (`tree_sp`), o terreno onde os cafezais foram plantados (`plot`), a distância dos cafeeiros para as árvores de sombra (`distance`) e a precipitação de chuva (`rainfall_size`). 
+
+A base de dados considerada contém 2.100 observações, em que todas representam informações colhidas das árvores das espécies _Tabebuia rosea_ e _Simarouba glauca_ no período de 26/05/2013 a 11/10/2013 na região cafeeira de Carazo, na Nicarágua. 
+
+<br>
+
+### Os autores
+
+- **Elias Rosa Ribeiro Júnior** cursa bacharelado em Estatística na Universidade Federal do Espírito Santo (UFES). Contato: .
+
+- **Lucas Lacerda de Oliveira** cursa bacharelado em Estatística na Universidade Federal do Espírito Santo (UFES). Contato: .
+
+- **Ornella Scardua Ferreira** cursa bacharelado em Estatística na Universidade Federal do Espírito Santo (UFES). Contato: ornella.ferreira@edu.ufes.br.

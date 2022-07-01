@@ -1,0 +1,316 @@
+---
+title: "Planejamento de experimentos: uma aplicação no plantio de café sombreado "
+author: "Elias Ribeiro, Ornella Scardua e Lucas Lacerda"
+date: "20/03/2022"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = 'center', message = FALSE, warning = FALSE, out.width = "80%")
+
+library(tidyverse)
+library(patchwork)
+
+theme_set(ggplot2::theme_light())
+```
+
+\newpage 
+
+```{r,echo=FALSE}
+dados <- readr::read_table("Tree_throughfall.txt")[,1:11]
+colnames(dados) <- c("date", "pluviometro", "plot", "distance", "tree_sp", "tree_number", "rainfall", "rainfall_size", "throughfall", "interception", "lai")
+dados <- dados %>% 
+  transform(date = as.Date(date, format = "%d/%m/%Y"),
+         plot = as.factor(plot),
+         rainfall_size = as.factor(rainfall_size),
+         tree_sp = as.factor(tree_sp),
+         tree_number = as.factor(tree_number),
+         distance = as.factor(distance)) %>% 
+  mutate(tree_sp = case_when(tree_sp == 1 ~ "Tr", tree_sp == 2 ~ "Sg"))
+
+dados$tree_sp <- factor(dados$tree_sp, levels = c("Tr","Sg"))
+# glimpse(dados)
+```
+
+# Resumo
+
+O café sombreado é uma das técnicas mais antigas de cultivo de café no mundo, sendo Colômbia, Costa Rica, Guatemala, El Salvador e México os países difundidores e principais utilizadores desse sistema de produção. Ao utilizar o café sombreado, espera-se avaliar o potencial das árvores auxiliares em interceptar a água das chuvas, fator de grande impacto na saúde dos cafeeiros e posterior qualidade dos grãos. Por isso, a escolha da espécie das árvores é uma etapa crucial, visto que a arquitetura de uma árvore como um todo é que faz a diferença para o bom funcionamento do sistema de sombreamento. Nesse sentido, neste trabalho serão abordados vários modelos de planejamento experimentais a fim de identificar qual delineamento (e tratamento) que garante o melhor escoamento das chuvas para a absorção pelo sistema radicular do café arábica, levando-se em consideração não só o tipo das árvores mas também o terreno onde os cafezais foram plantados, a distância dos cafeeiros para as árvores de sombra e a precipitação de chuva. Em particular, foram usadas as árvores das espécies _Tabebuia rosea_, mais presente em locais com clima semi-árido, e _Simarouba glauca_, nativa de regiões tropicais e subtropicais. O presente estudo é resultante de pesquisas realizadas no período de 26/05/2013 a 11/10/2013 na região cafeeira de Carazo, na Nicarágua.
+
+# Descritiva
+
+Analisamos a base de dados com 5 variáveis e 2.100 observações, em que todas representam informações colhidas das árvores das espécies _Tabebuia rosea_ e _Simarouba glauca_ no período de 26/05/2013 a 11/10/2013 na região cafeeira de Carazo, na Nicarágua. Como tratamento consideramos os fatores espécie da árvore (`tree_sp`), o espaço onde os cafezais foram plantados (`plot`), a distância dos cafeeiros para as árvores de sombra (`distance`) e a precipitação de chuva categórica (`rainfall_size`) e a interação entre eles. Como desfecho, queremos investigar o fator ou conjunto de fatores que garante o melhor escoamento das chuvas para a absorção pelas raízes do café arábica.
+
+## Gráficos
+
+Gráficos de densidade e de boxplot foram construídos a fim de analisar a relação entre fator ou fatores com o desfecho.
+
+### Gráficos de densidade do escoamento das chuvas
+
+```{r, echo=FALSE, out.width="80%"}
+p8 <- dados %>% 
+  ggplot(aes(throughfall)) + 
+  geom_density(aes(color = tree_sp, fill = tree_sp), alpha = 0.4) + 
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme(legend.position = "bottom")
+
+p9 <- dados %>%
+  ggplot(aes(throughfall)) +
+  geom_density(aes(color = plot, fill = plot), alpha = 0.4) +
+  scale_fill_viridis_d() +
+  labs(y = NULL) +
+  scale_color_viridis_d() +
+  theme(legend.position = "bottom")
+
+p10 <- dados %>%
+  ggplot(aes(throughfall)) +
+  geom_density(aes(color = distance, fill = distance), alpha = 0.4) +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme(legend.position = "bottom")
+p11 <- dados %>%
+  ggplot(aes(throughfall)) +
+  geom_density(aes(color = rainfall_size, fill = rainfall_size), alpha = 0.4) +
+  scale_fill_viridis_d() +
+  labs(y = NULL) +
+  scale_color_viridis_d() +
+  theme(legend.position = "bottom")
+
+(p8|p9)/(p10|p11)
+
+```
+
+No primeiro gráfico podemos observar uma densidade maior para a espécie Tabebuia (Tr) se considerarmos valores menores de escoamento,  enquanto a espécie Simarouba (Sg) se sobressai na maior parte dos valores acima de 20. Desse modo, podemos supor que a espécie Sg tem um melhor desempenho para a absorção de água pelos cafeeiros. Além disso, vemos que a densidade de ambas as espécies é extremamente similar, indicando resultados próximos de escoamento independente da espécie escolhida para fazer a sombra para a plantação de café. Ao avaliar o segundo gráfico, ficam claras que as densidades são bastante parecidas para todos níveis do fator terreno, em que o nível 1 se sobressai nos resultados menores de escoamento, o nível 2 nos resultados intermediários e o nível 3 nos maiores resultados. O terceiro gráfico sugere que quanto maior a distância do cafeeiro para as árvores de sombra, menor será a densidade para resultados pequenos de escoamento (0-10). Acerca dos níveis de precipitação de chuva, é visível que existe uma distinção clara entre eles, uma vez que cada uma das categorias tem intervalos de escoamento bastante definidos. Ademais, podemos ver que as varáveis tem uma relação direta, em que para níveis maiores de precipitação de chuva temos maiores valores de escoamento.  
+
+### Gráficos de boxplot da interação entre a precipitação de chuva com os demais fatores
+
+```{r,echo=FALSE}
+p1 <- dados %>% 
+  ggplot(aes(rainfall_size, throughfall, color = tree_sp, fill = tree_sp)) + 
+  geom_boxplot(alpha = 0.4) + 
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme(legend.position = "bottom")
+
+p2 <- dados %>% 
+  ggplot(aes(rainfall_size, throughfall, color = plot, fill = plot)) + 
+  geom_boxplot(alpha = 0.4) +  
+  labs(y = NULL) +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme(legend.position = "bottom")
+
+p3 <- dados %>% 
+  ggplot(aes(rainfall_size, throughfall, color = distance, fill = distance)) + 
+  geom_boxplot(alpha = 0.4) +  
+  labs(y = NULL) +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme(legend.position = "bottom")
+
+p1|p2/p3
+```
+
+No gráficos acima vemos que quanto maior o nível de de precipitação de chuva melhor os resultados de escoamento. Além disso, fica claro que as espécies para níveis menores de precipitação têm resultados muito similares, mostrando uma diferença mais significativa para os niveis 4 e 5. Já para distância entre os cafeeiros e as árvores de sombra, nos níveis 3, 4 de precipitação vemos uma diferença crescente entre as distâncias e para o nível 5 podemos observar um melhor desempenho na distância 250. Similarmente, temos o terreno apresentando pequenas diferenças entre suas categorias para níveis 4 e 5 de precipitação com o terreno 3 sempre se sobressaindo. 
+
+### Gráficos de boxplot da interação entre espécies com o terreno e a distância
+
+```{r,echo=FALSE}
+p4 <- dados %>% 
+  ggplot(aes(plot, throughfall, color = tree_sp, fill = tree_sp)) + 
+  geom_boxplot(alpha = 0.4) + 
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme(legend.position = "bottom")
+
+p5 <- dados %>% 
+  ggplot(aes(distance, throughfall, color = tree_sp, fill = tree_sp)) + 
+  geom_boxplot(alpha = 0.4) + 
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme(legend.position = "bottom")
+
+p4|p5
+```
+
+Para o fator terreno podemos notar que a espécie Sg acaba tendo melhores resultados de escoamento independente do nível. Já para distancia entre os cafeeiros e as árvores, temos uma diferença clara entre as espécies para o nível 250, uma diferença um pouco mais sutil para o nível 550 e o nível 100 sendo o único em que a espécie Tr parece apresentar um desempenho melhor, devido a uma maior frequência e maiores outliers. 
+
+### Gráficos de boxplot da interação entre terreno e distância por espécie 
+
+```{r,echo=FALSE}
+dados %>% 
+  ggplot(aes(plot, throughfall, color = tree_sp, fill = tree_sp)) + 
+  geom_boxplot(alpha = 0.4) + 
+  facet_wrap(~distance) +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme(legend.position = "bottom")
+```
+
+Inicialmente podemos notar na distância 550 a ausência do terreno 1, assim como não temos a espécie Tr para o terreno 3. Além do mais, temos melhor desempenho da espécie Sg em todos os níveis de terrenos para distância 250 e para o terreno 2 na distância 550. Para distância igual a 100 temos melhor desempenho da espécie Sg no terreno 2 e nos demais níveis de terrenos temos a espécie Sg sendo desempenhado de maneira inferior. 
+
+### Gráficos de boxplot da interação entre precipitação de chuva e distância por espécie e terreno
+
+```{r fig.height=10,echo=FALSE}
+p6 <- dados %>% 
+  ggplot(aes(rainfall_size, throughfall, color = tree_sp, fill = tree_sp)) + 
+  geom_boxplot(alpha = 0.4) + 
+  facet_wrap(~distance) +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme(legend.position = "bottom")
+
+p7 <- dados %>% 
+  ggplot(aes(rainfall_size, throughfall, color = plot, fill = plot)) + 
+  geom_boxplot(alpha = 0.4) + 
+  facet_wrap(~distance) +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme(legend.position = "bottom")
+
+p6/p7
+```
+
+Nos gráficos acima vemos claramente que a precipitação de chuva tem um impacto muito forte no resultado de escoamento independente das outras variáveis que estão iteragindo com ela. No mais, para o primeiro gráfico, com exceção da distância 100, temos a espécie Sg com desempenho maior ou igual a espécie Tr. No segundo gráfico, vemos que para distância 100 o terreno 3 tem um desempenho melhor para altos níveis de precipitação de chuva. Se focamos no níveis 4 e 5 de precipitação temos o terreno 3 com desempenho superior aos demais  principalmente por ter maior consistência em resultados altos no nível 5. 
+
+# Delineamentos
+
+Nesta etapa de planejamento de experimentos foram testados varios modelos cujo o melhor será aquele que obtiver a menor soma de quadrados dos erros em consoante com as maiores somas de quadrados dos fatores. Os fatores acompanhados por * , ** , *** foram significantes ao nível de significância de 5%, 1% e 0.1%, nesta ordem.
+
+## Delineamento com um fator
+
+Anovas          | SQ distance   | SQ plot     | SQ tree_sp    | SQ rainfall_size | SQ Erro 
+:------------- | :-------- | :------ | :-------- | :--------  | :------ 
+Modelo 1        |            |          |            | 302136  *** | 48591    
+Modelo 2        |            |          | 449        |             | 350278   
+Modelo 3        |            | 298      |            |             | 350429   
+Modelo 4        | 1252 *     |          |            |             | 349474   
+
+Podemos observar que dentre os modelos apresentados, apenas o modelo 1 se mostrou eficiente em explicar a variabilidade de escoamento onde a precipitação de chuva, presente no modelo, foi significativa, ao contrário do restante dos modelos onde a soma de quadrados dos erros é extremamente alta.
+
+```{r, echo=FALSE, eval=FALSE}
+aov(throughfall ~ rainfall_size, data = dados) %>% summary
+aov(throughfall ~ tree_sp, data = dados) %>% summary
+aov(throughfall ~ plot, data = dados) %>% summary
+aov(throughfall ~ distance, data = dados) %>% summary
+```
+
+## Delineamento fatorial com dois fatores
+
+Anovas          | SQ distance   | SQ plot     | SQ tree_sp    | SQ rainfall_size| SQ interação  | SQ Erro 
+:------------- | :-------- | :------ | :-------- | :------    | :------  | :------ 
+Modelo 5        |            |          | 449 ***    | 302136 ***  | 289 *     | 47853    
+Modelo 6        |            | 298 **   |            | 302136 ***  | 996 ***   | 47298    
+Modelo 7        | 1252 ***   |          |            | 302136 ***  | 817 ***   | 46522    
+Modelo 8        |            | 219      | 449        |             | 116       | 349943  
+Modelo 9        | 1128*      |          | 449        |             | 672       | 349943  
+
+Com respeito aos delineamentos com dois fatores podemos observar um comportamento semelhante aos delineamentos com um fator onde a precipitação de chuva mostrou-se com um melhor desempenho em relação as outras variáveis na explicabilidade do escoamento. Pode-se notar que os modelos com as menores soma de quadrados dos erros são aqueles em que existe a variável precipitação de chuva, fazendo com que todos aqueles que contenham essa variável se tornem os melhores modelos. Olhando para as outras variáveis podemos perceber que a distância tem uma maior soma de quadrados em relação ao terreno e espécie, e que apesar do terreno ter a menor soma de quadrados individualmente, a interação da mesma com a a precipitação se mostra a maior interação.
+
+```{r,echo=FALSE,fig.width=8,fig.height=6}
+par(mfrow=c(1,3))
+interaction.plot(dados$tree_sp, dados$rainfall_size, dados$throughfall, legend=T, col=2:4, lwd=2, xlab = "Specie", ylab = "Throughfall",data=dados,trace.label = "precipitação",type="l")
+interaction.plot(dados$tree_sp, dados$distance, dados$throughfall, legend=T, col=2:4, lwd=2, xlab = "Specie", ylab = "" ,trace.label="distância",type="l")
+interaction.plot(dados$tree_sp, dados$plot, dados$throughfall, legend=T, col=2:4, lwd=2, xlab = "Specie", ylab = "" ,trace.label="terreno",type="l")
+```
+
+Fixando as espécies no gráfico acima podemos observar que para precipitação existe uma variabilidade muito pequena entre as espécies, principalmente se cosiderarmos níveis de chuva mais baixos. 
+Para a distância podemos observar que a espécie Sg se mostra superior a Tr em distâncias maiores mostrando uma variabilidade menor na distancia 550 de uma espécie para outra. Se olharmos atentamente para as distâncias 550 e 250 podemos observar que elas se mostram similarmente com um bom desempenho na espécie Sg, ao contrário da espécie Tr onde a distância 250 se mostra inferior.
+Acerca do terreno podemos notar que o terreno 3 além de possuir baixa variabilidade entre as espécies ele se mostra superior em ambos os casos, ao contrário do terreno 1 que tem uma variabilidade muito grande e se mostra superior ao terreno 2 apenas na espécie Sg.
+
+```{r,echo=FALSE,eval=FALSE}
+aov(throughfall ~ tree_sp*rainfall_size, data = dados) %>% summary
+aov(throughfall ~ plot*rainfall_size, data = dados) %>% summary
+aov(throughfall ~ distance*rainfall_size, data = dados) %>% summary
+aov(throughfall ~ tree_sp*plot, data = dados) %>% summary
+aov(throughfall ~ tree_sp*distance, data = dados) %>% summary
+```
+
+## Delineamento fatorial com três fatores
+
+Anovas                             | Modelo 10       | Modelo 11   | Modelo 12   
+:-------------                     | :--------       | :------       | :-------- | 
+SQ distance                        | 1087 ***        | 1002 *        | 1128 ***       
+SQ rainfall_size                   | 302136 ***      |               | 302136 ***      |               
+SQ plot                            | 298 **          | 219           |               
+SQ tree_sp                         |                 | 449           | 449 ***        
+SQ tree_sp:plot                    |                 | 238           |         
+SQ rainfall_size:distance          | 671 ***         |               | 771 ***
+SQ tree_sp:distance                |                 | 725           | 672 ***
+SQ plot:distance                   | 51              | 129           |
+SQ plot:rainfall_size              | 996 ***         |               |
+SQ tree_sp:rainfall_size           |                 |               | 289 **
+SQ plot:rainfall_size:distance     | 103             |               |
+SQ tree_sp:plot:distance           |                 | 352           |       
+SQ tree_sp:rainfall_size:distance  |                 |               | 954 ***
+SQ Erro                            | 45386           | 347613        | 44328
+
+No que se refere aos delineamentos fatoriais com 3 fatores observamos um comportamento similar aos outros delineamentos onde a variável de precipitação de chuva se mostra de longe uma variável de peso para o modelo, explicando sozinha a maior parte da variabilidade do escoamento. Acerca das interações podemos observar que a variável distância tem um maior desempenho quando relacionada com a espécie e precipitação do que com a variável de terreno, tal qual só tem um melhor desempenho se relacionada com a precipitação. Observando os resíduos dos modelos podemos observar que o modelo 12 tem a menor soma de quadrados dos erros comparado aos outros. Assim, concluímos que o modelo 12 com os fatores precipitação de chuva, espécie e distância é o melhor modelo dentre os demais, sendo este modelo escolhido para nosso delineamento fatorial.
+
+```{r, echo=FALSE, eval=FALSE}
+aov(throughfall ~ plot*rainfall_size*distance, data = dados) %>% summary
+aov(throughfall ~ tree_sp*plot*distance, data = dados) %>% summary
+aov(throughfall ~ tree_sp*rainfall_size*distance, data = dados) %>% summary
+```
+
+```{r,echo=FALSE,fig.width=8,fig.height=6}
+colr <- RColorBrewer::brewer.pal(11, "PiYG")
+colr <- colorRampPalette(colr, space = "rgb")
+lattice::wireframe(throughfall ~  rainfall_size + distance | tree_sp, data = dados, drape = TRUE, type = "on",scales = list(arrows = FALSE),col.regions = colr(100))
+```
+
+Fixando as espécies nos gráficos 3D de interações com 3 fatores podemos confirmar o que ja havíamos dito anteriormente sobre a relação crescente entre precipitação e escoamento para as duas espécies de árvores com ênfase na espécie Sg onde existem maiores quantidades de escoamento. Olhando separadamente as espécies podemos observar que para a espécie Tr a distância não influencia muito no desempenho em níveis de precipitação de chuva mais baixos e se mostra levemente superior na distancia 550 em níveis de chuvas mais altos. Quanto a Sg notamos que o melhor desempenho é obtido na distância 250 para níveis de chuva acima de 3.
+
+# Análise de Resíduos 
+
+Em posse do melhor modelo, isto é, o modelo em que foram considerados os fatores precipitação de chuva, espécie e distância, a analise de diagnóstico se faz necessária. Notavelmente as suposições de exogeneidade, normalidade e homocedasticidade estão sendo violadas - o que parece fazer sentido dada a grande variabilidade nos resíduos. Apesar disso, como a intenção deste trabalho não é corrigir essas problemáticas, seguiremos com este modelo como melhor candidato em explicar a variabilidade do escoamento.
+
+```{r,echo=FALSE}
+fit <- aov(throughfall ~ tree_sp*rainfall_size*distance, data = dados)
+par(mfrow = c(2, 2))
+plot(fit)
+```
+
+# Comparação das médias
+
+Ao fazer comparações de médias entre os pares de fatores fixando a espécie e comparações múltiplas por meio do teste de Tuckey, as conclusões corroboram com as ja feitas em análises anteriores : A espécie Sg garante melhor escoamento sob distancias a partir de 250 sobretudo a partir de níveis altos de precipitação de chuva. Os resultados foram ocultados devido ao volume de comparações.
+
+```{r,echo=FALSE,eval=FALSE}
+fit_lsmeans <- lsmeans::lsmeans(fit, ~tree_sp|(rainfall_size*distance))
+pairs(fit_lsmeans)
+
+(fit_tukey<-TukeyHSD(fit, "tree_sp:rainfall_size:distance"))
+```
+
+# Efeito dos fatores de precipitação e distância por espécie
+
+Após realizarmos um desdobramento de interações por espécie, constatamos mais uma vez o que havíamos concluido até essa etapa, que dentre as interações entre da precipitação de chuva e da distância com o tipo da árvore a espécie Sg se mostra com maior variabilidade explicada.
+
+```{r,echo=FALSE}
+fit_plot <- aov(throughfall ~ tree_sp/(rainfall_size*distance), data = dados)
+```
+
+```{r,echo=FALSE}
+summary(fit_plot, split=list("tree_sp:rainfall_size" = list(
+  "tree_spTr"= grep("tree_spTr", names(coef(fit_plot)[3:10])), 
+  "tree_spSg"= grep("tree_spSg", names(coef(fit_plot)[3:10]))), 
+  "tree_sp:distance" = list("tree_spTr"= grep("tree_spTr", names(coef(fit_plot)[11:14])), 
+                            "tree_spSg"= grep("tree_spSg", names(coef(fit_plot)[11:14])))))
+```
+
+# Conclusão
+
+Neste estudo, usamos diferentes tipos de delineamentos experimentais com a intenção de encontrar o fator ou o conjunto de fatores que mais influenciava na absorção da águas das chuvas pelas raĩzes do cafezais do tipo arábica. No entanto, ainda que a espécie de uma árvore de sombra tenha grande relevância no sistema de sombreamento do cultivo do café, vimos que somente a espécie não foi o suficiente para alcançar o desfecho esperado. No contexto considerado, além do fator distância entre as culturas, a precipitação de chuva foi o fator mais importante. Além de explicar a maior variabilidade do escoamento de chuva em qualquer delineamento proposto, ele potencializou interações de modo a minimizar a variabilidade dos erros. Por fim, no caso do café arábica em particular, o melhor planejamento consistiu no fatorial com 3 fatores: espécie, distância e precipitação de chuva.
+
+
+
+
+
+
+
